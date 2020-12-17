@@ -1,1 +1,3 @@
-play ../audio/maskoff_tone.wav && play ../audio/maskon_tone.wav && play tone.wav
+play ../audio/maskoff_tone.wav &&
+play ../audio/maskon_tone.wav &&
+play ../audio/sim_maskon_tone_final.wav

@@ -1,1 +1,3 @@
-play ../audio/maskoff_sentence.wav && play ../audio/maskon_sentence.wav && play sentence.wav
+play ../audio/maskoff_sentence.wav &&
+play ../audio/maskon_sentence.wav &&
+play ../audio/sim_maskon_sentence_final.wav
