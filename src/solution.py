@@ -18,13 +18,17 @@ def central_clip(signal):
 
     return data
 
+def lag(signal, prah):
+    return np.argmax(np.abs(signal[prah:])) + prah
+
+
 def autocorr(signal):
     N = signal.size
     tmp = np.zeros(N)
     for k in range(0, N):
         sum = 0
-        for n in range(0, N-k):
-            sum += signal[n] * signal[n+k]
+        for n in range(k, N):
+            sum += signal[n] * signal[n-k]
         tmp[k] = sum
 
     return tmp
@@ -37,11 +41,40 @@ def dft(x):
     return X
 
 data_tone_off, fs = soundfile.read('../audio/maskoff_tone.wav')
-tone_off = data_tone_off[35000:51000]
+startOFF = 27200
+tone_off = data_tone_off[startOFF:startOFF+fs]
 t1 = np.arange(tone_off.size) / fs
 
 data_tone_on, fs = soundfile.read('../audio/maskon_tone.wav')
-tone_on = data_tone_on[32000:48000]
+startON = 28160
+tone_on = data_tone_on[startON:startON+fs]
+
+# startOFF = 0
+# startON = 0
+# max = 0
+# size = 16000
+# for j in range(0, data_tone_off.size, 1600):
+#     for i in range(0, data_tone_on.size, 320):
+#         ccr = np.correlate(data_tone_off[j:j+size], data_tone_on[i:i+size])
+#         cmax = np.max(ccr)
+#
+#         if (cmax > max):
+#             max = cmax
+#             startOFF = j
+#             startON = i
+# print(startOFF, startON)
+# quit()
+
+# fig, (ax1, ax2) = plt.subplots(2)
+# ax1.plot(np.arange(data_tone_off.size), data_tone_off)
+# ax2.plot(np.arange(data_tone_on.size), data_tone_on)
+# fig, (ax1, ax2) = plt.subplots(2)
+# ax1.plot(np.arange(data_tone_off[startOFF:startOFF+16000].size), data_tone_off[startOFF:startOFF+16000])
+# ax2.plot(np.arange(data_tone_on[startON:startON+16000].size), data_tone_on[startON:startON+16000])
+# plt.show()
+# quit()
+
+
 t2 = np.arange(tone_on.size) / fs
 
 t1 -= np.mean(t1)
@@ -56,7 +89,7 @@ freq = 16000
 ramec_size = int(ramec_size_s * freq)
 step = int(0.01 * freq)
 
-N = 100
+N = 99
 ramec_off = []
 ramec_on = []
 
@@ -68,34 +101,37 @@ for i in range(0, N):
     ramec_on.append([])
     ramec_off[i] = tmp1.copy()
     ramec_on[i] = tmp2.copy()
-# TODO handle posledny ramec
 
-# ramecA = central_clip(ramec_off[20])
-# resultA = autocorr(ramecA)
-# ramecB = central_clip(ramec_on[20])
-# resultB = autocorr(ramecB)
 
-prah = 10
+prah = 20
 samples = 1024
-base_freqsA = np.zeros(N)
-base_freqsB = np.zeros(N)
+base_freqsOFF = np.zeros(N)
+base_freqsON = np.zeros(N)
 sgrOFF = np.zeros(shape=[N, samples], dtype=complex)
 sgrON = np.zeros(shape=[N, samples], dtype=complex)
 H = np.zeros(samples, dtype=complex)
+
+# resultB = autocorr(central_clip(ramec_on[5]))
+# L = np.argmax(np.abs(resultB[prah:])) + prah
+# base_freqsON[5] = fs / L
+# plt.figure(999, figsize=(6,3))
+# plt.plot(np.arange(resultB.size), resultB)
+# plt.show()
+# quit()
+
 for i in range(0, N):
     # mask off
-    resultA = autocorr(central_clip(ramec_off[i]))
-    indexA = np.argmax(np.abs(resultA[prah:])) + prah
-    tmp = np.abs(ramec_off[i][indexA])
-    base_freqsA[i] = tmp * 1600
+    cc = central_clip(ramec_off[i])
+    ac = autocorr(cc)
+    L = lag(ac, prah)
+    base_freqsOFF[i] = fs / L
     # spec
     sgrOFF[i] = np.fft.fft(ramec_off[i], samples)
 
     # mask on
     resultB = autocorr(central_clip(ramec_on[i]))
-    indexB = np.argmax(np.abs(resultB[prah:])) + prah
-    tmp = np.abs(ramec_off[i][indexB])
-    base_freqsB[i] = tmp * 1600
+    L = np.argmax(np.abs(resultB[prah:])) + prah
+    base_freqsON[i] = fs / L
     # spec
     sgrON[i] = np.fft.fft(ramec_on[i], samples)
 
@@ -108,69 +144,146 @@ sgrON_log = np.transpose(10 * np.log10(np.abs(sgrON)**2))
 H = np.abs(H) / N
 io = np.fft.ifft(H)
 
-out = ss.lfilter(H, 1.0, data_tone_off)
-out /= np.abs(out).max()
-wav.write('tone.wav', fs, out.astype(data_tone_off.dtype))
+outT = ss.lfilter(H, 1.0, data_tone_off)
+outT /= np.abs(outT).max()
+wav.write('tone.wav', fs, outT.astype(data_tone_off.dtype))
 
 
 sentenceOFF, fs = soundfile.read('../audio/maskoff_sentence.wav')
-out = ss.lfilter(H, 1.0, sentenceOFF)
-out /= np.abs(out).max()
-wav.write('sentence.wav', fs, out.astype(data_tone_off.dtype))
-
-# print(np.mean(base_freqsA), np.var(base_freqsA))
-# print(np.mean(base_freqsB), np.var(base_freqsB))
+outS = ss.lfilter(H, 1.0, sentenceOFF)
+outS /= np.abs(outS).max()
+wav.write('sentence.wav', fs, outS.astype(data_tone_off.dtype))
 
 
+# PROTOCOL DATA
+dir = '../img/'
 # --------------------------    DATA
-# plt.figure(1, figsize=(6,3))
-# plt.plot(t1, tone_off)
-# plt.figure(2, figsize=(6,3))
-# plt.plot(t2, tone_on)
-# --------------------------    RAMCE
-# TODO add to protocol
-# plt.figure(2, figsize=(6,3))
-# x = list(range(ramec_size))
-# plt.plot(x, ramec_off[20])
-# plt.plot(x, ramec_on[20])
-# --------------------------    CENTRALNE KLIPOVANIE
-# TODO grafy z 4.a
-# x = list(range(ramec_size))
-# plt.figure(3, figsize=(6,3))
-# plt.plot(x, ramec_off[20])
-# plt.plot(x, ramecA)
-# plt.figure(4, figsize=(6,3))
-# plt.plot(x, ramec_on[20])
-# plt.plot(x, ramecB)
-# --------------------------    AUTOKORELACIA
-# plt.figure(5, figsize=(6,3))
-# plt.plot(t1[:ramec_size], resultA)
-# plt.plot(t2[:ramec_size], resultB)
-# --------------------------    ZAKLADNE FREQs
-# plt.figure(6, figsize=(6,3))
-# xa = list(range(len(base_freqsA)))
-# xb = list(range(len(base_freqsB)))
-# plt.plot(xa, base_freqsA)
-# plt.plot(xb, base_freqsB)
-# --------------------------    SPECTROGRAMS
-# plt.figure(8, figsize=(9,3))
-# plt.imshow(sgrOFF_log[:int(samples/2)], origin='lower', extent=[0.,1., 0,int(fs/2)], aspect='auto')
-# plt.colorbar()
-# plt.figure(9, figsize=(9,3))
-# plt.imshow(sgrON_log[:int(samples/2)], origin='lower', extent=[0.,1., 0,int(fs/2)], aspect='auto')
-# plt.colorbar()
-# --------------------------    FREQ CHARAKTERISTIKA FILTRA
-# plt.figure(10, figsize=(6,3))
-# plt.plot(np.arange(samples), H)
-# --------------------------    IMPULZNA ODOZVA
-# plt.figure(11, figsize=(6,3))
-# plt.plot(np.arange(samples), io)
+# fig, (ax1, ax2) = plt.subplots(2)
+# ax1.plot(t1, tone_off)
+# ax2.plot(t2, tone_on)
+# --------------------------    [3] RAMCE
+x = np.arange(0., ramec_size_s, ramec_size_s / ramec_size)
+plt.figure(figsize=(10,4))
+plt.plot(x, ramec_off[20], label='mask off')
+plt.plot(x, ramec_on[20], label='mask on')
+
+plt.xlabel('vzorky')
+plt.suptitle('Rámce')
+plt.legend()
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+plt.savefig(dir + 'ramce.png')
+
+# --------------------------    [4] RAMEC
+fig, axs = plt.subplots(4)
+fig.set_size_inches(10,7)
+
+axs[0].plot(x, ramec_off[20], label='mask off')
+axs[0].set_title('Rámec')
+axs[0].set_xlabel('čas')
+# --------------------------    [4] CENTRALNE KLIPOVANIE
+x = list(range(ramec_size))
+cc = central_clip(ramec_off[20])
+axs[1].plot(x, cc)
+axs[1].set_title('Centrálne klipovanie so 70 %')
+axs[1].set_xlabel('vzorky')
+# --------------------------    [4] AUTOKORELACIA
+ac = autocorr(cc)
+lg = lag(ac, prah)
+val = ac[lg]
+axs[2].plot(x, ac)
+axs[2].set_title('Autokorelácia')
+axs[2].set_xlabel('vzorky')
+axs[2].plot([prah, prah], [0, 20], 'black', lw=2, label='Prah')
+axs[2].plot([lg, lg], [0, val], 'red', lw=2, label='Lag')
+axs[2].legend()
+# --------------------------    [4] ZAKLADNE FREQs
+xa = list(range(len(base_freqsOFF)))
+xb = list(range(len(base_freqsON)))
+axs[3].plot(xa, base_freqsOFF, label='mask off')
+axs[3].plot(xb, base_freqsON, label='mask on')
+axs[3].set_title('Základné frekvencie rámcov')
+axs[3].set_xlabel('rámce')
+axs[3].legend()
+
+plt.tight_layout()
+plt.savefig(dir + 'baseFqs.png')
+
+# mean & variance of base freqs     [4b]
+# print(np.mean(base_freqsOFF), np.var(base_freqsOFF))
+# print(np.mean(base_freqsON), np.var(base_freqsON))
+
+
+# --------------------------    [5] SPECTROGRAMY
+fig, (ax1, ax2) = plt.subplots(2)
+fig.set_size_inches(10, 8)
+im1 = ax1.imshow(sgrOFF_log[:int(samples/2)], origin='lower', extent=[0.,1., 0,int(fs/2)], aspect='auto')
+im2 = ax2.imshow(sgrON_log[:int(samples/2)], origin='lower', extent=[0.,1., 0,int(fs/2)], aspect='auto')
+
+ax1.set_title('Spectrogram bez rúšky')
+ax2.set_title('Spectrogram s rúškou')
+ax1.set_xlabel('čas')
+ax2.set_xlabel('čas')
+ax1.set_ylabel('frekvencia')
+ax2.set_ylabel('frekvencia')
+
+fig.colorbar(im1, ax=ax1)
+fig.colorbar(im2, ax=ax2)
+
+plt.tight_layout()
+plt.savefig(dir + 'sgrs.png')
+
+
+# --------------------------    [6] FREQ CHARAKTERISTIKA FILTRA
+plt.figure(figsize=(8,6))
+plt.suptitle("Frekvenčná charakteristika rúšky")
+
+plt.plot(np.arange(samples) / samples * fs/2, H)
+plt.xlabel('frekvencia')
+
+plt.tight_layout()
+plt.savefig(dir + 'freqch.png')
+# --------------------------    [7] IMPULZNA ODOZVA
+plt.figure(figsize=(8,6))
+plt.suptitle("Impulzná odozva rúšky")
+plt.plot(np.arange(samples), np.abs(io))
+plt.xlabel('čas')
+
+plt.tight_layout()
+plt.savefig(dir + 'impOdoz.png')
+# --------------------------    [8] VYSLEDOK
+fig, axs = plt.subplots(4)
+fig.set_size_inches(10, 10)
+
+sentenceOFF, fs = soundfile.read('../audio/maskoff_sentence.wav')
+sentenceON, fs = soundfile.read('../audio/maskon_sentence.wav')
+sim = ss.lfilter(H, 1.0, sentenceOFF)
+sim /= np.abs(sim).max()
+
+sentenceOFF /= np.abs(sentenceOFF).max()
+sentenceON /= np.abs(sentenceON).max()
+
+
+axs[0].set_title('Veta bez rúšky')
+axs[0].plot(np.arange(sentenceOFF.size), sentenceOFF, label='off')
+axs[0].plot(np.arange(sentenceON.size), sentenceON, label='on')
+axs[0].legend()
+
+# axs[1].set_title('Veta s rúškou')
+# axs[1].plot(np.arange(sentenceON.size), sentenceON)
+
+axs[2].set_title('Veta so simulovanou rúškou')
+axs[2].plot(np.arange(sentenceOFF.size), sentenceOFF, label='off')
+axs[2].plot(np.arange(sim.size), sim, label='sim')
+
+axs[3].plot(np.arange(sim.size), sim, label='sim')
+axs[3].plot(np.arange(sentenceOFF.size), sentenceOFF, label='off')
+
+axs[2].legend()
+axs[3].legend()
+
+plt.tight_layout()
+plt.savefig(dir + 'outcome.png')
 # --------------------------
-# plt.figure(12, figsize=(6,3))
-# plt.plot(np.arange(data_tone_off.size), out)
-# plt.plot(np.arange(data_tone_on.size), data_tone_on)
-# --------------------------
 
-
-
-plt.show()
+# plt.show()
