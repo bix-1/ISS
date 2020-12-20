@@ -250,7 +250,7 @@ f_IR = f_IR[:int(samples/2)]
 dir = '../audio/'
 
 # tone
-out = ss.lfilter(H, [1], data_tone_off)
+out = ss.lfilter(IR, [1], data_tone_off)
 out /= np.abs(out).max()
 outT = out.real
 wav.write(dir + 'sim_maskon_tone.wav', fs, outT)
@@ -265,13 +265,13 @@ outT_ova = out.real
 wav.write(dir + 'sim_maskon_tone_overlap_add.wav', fs, outT_ova)
 
 # tone w/ window function
-out = ss.lfilter(w_H, [1], data_tone_off)
+out = ss.lfilter(w_IR, [1], data_tone_off)
 out /= np.abs(out).max()
 outT_w = out.real
 wav.write(dir + 'sim_maskon_tone_window.wav', fs, outT_w)
 
 # tone w/ only match
-out = ss.lfilter(om_H, [1], data_tone_off)
+out = ss.lfilter(om_IR, [1], data_tone_off)
 out /= np.abs(out).max()
 outT_om = out.real
 wav.write(dir + 'sim_maskon_tone_only_match.wav', fs, outT_om)
@@ -296,7 +296,7 @@ sentenceOFF, fs = soundfile.read('../audio/maskoff_sentence.wav')
 sentenceON, fs = soundfile.read('../audio/maskon_sentence.wav')
 
 # sentence
-out = ss.lfilter(H, [1], sentenceOFF)
+out = ss.lfilter(IR, [1], sentenceOFF)
 out /= np.abs(out).max()
 outS = out.real
 wav.write(dir + 'sim_maskon_sentence.wav', fs, outS)
@@ -311,13 +311,13 @@ outS_ova = out.real
 wav.write(dir + 'sim_maskon_sentence_overlap_add.wav', fs, outS_ova)
 
 # sentence w/ window function
-out = ss.lfilter(w_H, [1], sentenceOFF)
+out = ss.lfilter(w_IR, [1], sentenceOFF)
 out /= np.abs(out).max()
 outS_w = out.real
 wav.write(dir + 'sim_maskon_sentence_window.wav', fs, outS_w)
 
 # sentence w/ only match
-out = ss.lfilter(om_H, [1], sentenceOFF)
+out = ss.lfilter(om_IR, [1], sentenceOFF)
 out /= np.abs(out).max()
 outS_om = out.real
 wav.write(dir + 'sim_maskon_sentence_only_match.wav', fs, outS_om)
@@ -370,7 +370,7 @@ axs[4].plot(np.arange(outT_ova.size), outT_ova)
 axs[5].set_title('Sim (window function)')
 axs[5].plot(np.arange(outT_w.size), outT_w)
 
-out = ss.lfilter(om_H, [1], data_tone_off)
+out = ss.lfilter(om_IR, [1], data_tone_off)
 out /= np.abs(out).max()
 outT = out.real
 axs[6].set_title('Sim (only match)')
@@ -483,7 +483,7 @@ plt.savefig(dir + 'freqch.png')
 # --------------------------    [7] IMPULSE RESPONSE
 plt.figure(figsize=(8,4))
 plt.suptitle("Impulzná odozva rúšky")
-plt.plot(np.arange(IR.size), IR.real)
+plt.plot(np.arange(IR.size) / IR.size, IR.real)
 plt.xlabel('čas')
 
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -494,7 +494,7 @@ plt.savefig(dir + 'impOdoz.png')
 fig, axs = plt.subplots(3)
 fig.set_size_inches(10, 10)
 
-sim = ss.lfilter(H, [1], sentenceOFF)
+sim = ss.lfilter(IR, [1], sentenceOFF)
 sim /= np.abs(sim).max()
 
 sentenceOFF /= np.abs(sentenceOFF).max()
@@ -547,7 +547,7 @@ plt.savefig(dir + 'out_overlap_add.png')
 fig, axs = plt.subplots(3)
 fig.set_size_inches(10, 10)
 
-sim = ss.lfilter(w_H, [1], sentenceOFF)
+sim = ss.lfilter(w_IR, [1], sentenceOFF)
 sim /= np.abs(sim).max()
 
 axs[0].set_title('Veta bez rúšky')
