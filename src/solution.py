@@ -6,6 +6,10 @@ import scipy.signal as ss
 import scipy.io.wavfile as wav
 from scipy.stats import pearsonr
 
+import sys
+import os
+
+
 def central_clip(signal):
     data = np.array(signal).copy()
     split = max(np.abs(signal)) * 0.7
@@ -340,7 +344,18 @@ wav.write(dir + 'sim_maskon_sentence_final.wav', fs, outS_f)
 '''__________GENERATING OUTPUTS__________'''
 # graphs
 
+if (len(sys.argv) == 1):
+    quit()
+elif (len(sys.argv) > 2):
+    print('ERROR: Invalid number of arguments')
+    quit()
+elif (sys.argv[1] != '-g'):
+    print('ERROR: Invalid argument')
+    quit()
+
+
 dir = '../img/'
+os.mkdir(dir)
 
 # --------------------------    DATA
 fig, (ax1, ax2) = plt.subplots(2)
