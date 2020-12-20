@@ -257,7 +257,7 @@ dir = '../audio/'
 out = ss.lfilter(IR, [1], data_tone_off)
 out /= np.abs(out).max()
 outT = out.real
-wav.write(dir + 'sim_maskon_tone.wav', fs, outT)
+# wav.write(dir + 'sim_maskon_tone.wav', fs, outT)
 
 # tone w/ overlap-method
 step = int(sgmt_size / 2)
@@ -289,7 +289,8 @@ sgmts = split(data_tone_off, N, sgmt_size, step)
 out = overlapAdd(sgmts, f_IR, N)
 out /= np.abs(out).max()
 outT_f = out.real
-wav.write(dir + 'sim_maskon_tone_final.wav', fs, outT_f)
+# wav.write(dir + 'sim_maskon_tone_final.wav', fs, outT_f)
+wav.write(dir + 'sim_maskon_tone.wav', fs, outT_f)
 
 
 
@@ -303,7 +304,7 @@ sentenceON, fs = soundfile.read('../audio/maskon_sentence.wav')
 out = ss.lfilter(IR, [1], sentenceOFF)
 out /= np.abs(out).max()
 outS = out.real
-wav.write(dir + 'sim_maskon_sentence.wav', fs, outS)
+# wav.write(dir + 'sim_maskon_sentence.wav', fs, outS)
 
 # sentence w/ overlap-method
 step = int(sgmt_size / 2)
@@ -336,8 +337,8 @@ sgmts = split(sentenceOFF, N, sgmt_size, step)
 out = overlapAdd(sgmts, f_IR, N)
 out /= np.abs(out).max()
 outS_f = out.real
-wav.write(dir + 'sim_maskon_sentence_final.wav', fs, outS_f)
-
+# wav.write(dir + 'sim_maskon_sentence_final.wav', fs, outS_f)
+wav.write(dir + 'sim_maskon_sentence.wav', fs, outS_f)
 
 
 
@@ -355,7 +356,8 @@ elif (sys.argv[1] != '-g'):
 
 
 dir = '../img/'
-os.mkdir(dir)
+if (not os.path.exists(dir)):
+    os.mkdir(dir)
 
 # --------------------------    DATA
 fig, (ax1, ax2) = plt.subplots(2)
