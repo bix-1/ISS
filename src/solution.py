@@ -23,8 +23,8 @@ def central_clip(signal):
 
     return data
 
-def lag(signal, prah):
-    return np.argmax(np.abs(signal[prah:])) + prah
+def lag(signal, thr):
+    return np.argmax(np.abs(signal[thr:])) + thr
 
 def autocorr(signal):
     N = signal.size
@@ -74,11 +74,11 @@ def overlapAdd(x, h, N):
 
     return out
 
-def split(x, N, size, step):
+def split(signal, N, size, step):
     out = []
     for i in range(0, N):
         start = i * step
-        tmp = x[start : start + size]
+        tmp = signal[start : start + size]
         out.append([])
         out[i] = tmp.copy()
 
@@ -105,6 +105,7 @@ data_tone_off = data_tone_off[13200:63300]
 data_tone_on = data_tone_on[11400:60600]
 
 
+# perform cross-correlation
 # startOFF = 0
 # startON = 0
 # size = 16000
@@ -121,26 +122,19 @@ data_tone_on = data_tone_on[11400:60600]
 # print(startOFF, startON)
 # quit()
 
+# get starting positions
 startOFF = 23040
 startON = 14240
 
-
-# startOFF = 20000
+# get 1s long parts
 tone_off = data_tone_off[startOFF:startOFF+fs]
-t1 = np.arange(tone_off.size) / fs
-
-# startON = 21000
 tone_on = data_tone_on[startON:startON+fs]
+
+t1 = np.arange(tone_off.size) / fs
 t2 = np.arange(tone_on.size) / fs
 
-t1 -= np.mean(t1)
-t2 -= np.mean(t2)
 
-t1 /= np.abs(t1).max()
-t2 /= np.abs(t2).max()
-
-
-'''__________SEGMENTS__________'''
+# split to segments
 N = 99
 sgmt_size_s = 0.02
 sgmt_size = int(sgmt_size_s * fs)
@@ -151,7 +145,7 @@ sgmts_on = split(tone_on, N, sgmt_size, step)
 
 
 
-prah = 20
+thr = int(fs / 500)  # threshold
 samples = 1024
 base_freqsOFF = np.zeros(N)
 base_freqsON = np.zeros(N)
@@ -167,19 +161,19 @@ w_H = np.zeros(samples, dtype=complex)
 om_H = np.zeros(samples, dtype=complex)
 wom_H = np.zeros(samples, dtype=complex)
 
-# get array of L for each segment
+# get array of Lags for each segment
 L_off = np.zeros(N)
 L_on = np.zeros(N)
 for i in range(0,N):
     # mask off
     cc = central_clip(sgmts_off[i])
     ac = autocorr(cc)
-    L_off[i] = lag(ac, prah)
+    L_off[i] = lag(ac, thr)
 
     # mask on
     cc = central_clip(sgmts_on[i])
     ac = autocorr(cc)
-    L_on[i] = lag(ac, prah)
+    L_on[i] = lag(ac, thr)
 
 # get base freq of each segment
 for i in range(0,N):
@@ -440,12 +434,12 @@ axs[1].set_title('Centrálne klipovanie so 70 %')
 axs[1].set_xlabel('vzorky')
 # --------------------------    [4] AUTOCORRELATION
 ac = autocorr(cc)
-lg = lag(ac, prah)
+lg = lag(ac, thr)
 val = ac[lg]
 axs[2].plot(x, ac)
 axs[2].set_title('Autokorelácia')
 axs[2].set_xlabel('vzorky')
-axs[2].plot([prah, prah], [0, 20], 'black', lw=2, label='Prah')
+axs[2].plot([thr, thr], [0, 20], 'black', lw=2, label='Prah')
 axs[2].plot([lg, lg], [0, val], 'red', lw=2, label='Lag')
 axs[2].legend()
 # --------------------------    [4] BASE FREQs
@@ -650,10 +644,10 @@ plt.savefig(dir + 'finalSentence.png')
 # ------------------------------------------ [12] LAG MEDIAN FILTER
 # get faulty lag of segment
 n = 50
-prah = 0
+thr = 0
 cc = central_clip(sgmts_off[n])
 ac = autocorr(cc)
-L = lag(ac, prah)
+L = lag(ac, thr)
 val = ac[L]
 
 x = list(range(sgmt_size))
@@ -661,7 +655,7 @@ plt.figure(figsize=(6,3))
 plt.plot(x, ac)
 plt.suptitle('N-násobný lag')
 plt.xlabel('vzorky')
-plt.plot([prah, prah], [-5, 20], 'black', lw=2, label='Prah')
+plt.plot([thr, thr], [-5, 20], 'black', lw=2, label='Prah')
 plt.plot([L, L], [0, val], 'red', lw=2, label='Lag')
 plt.plot(L, val, 'bo')
 plt.legend()
